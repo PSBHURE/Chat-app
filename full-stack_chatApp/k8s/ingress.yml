@@ -6,11 +6,16 @@ metadata:
   labels:
     name: chatapp-ingress
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    #  nginx.ingress.kubernetes.io/rewrite-target: /
+    #  nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
 spec:
+  ingressClassName: alb
   rules:
-  - host: chat-tws.com
+  - host: chat-app.psbinfo.shop
     http:
       paths:
       - pathType: Prefix

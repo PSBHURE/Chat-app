@@ -20,7 +20,7 @@ variable "azs" {
 
 variable "env" {
   description = "environment of infra"
-  type = list(string)
+  type = string
 }
 
 variable "default_tags" {

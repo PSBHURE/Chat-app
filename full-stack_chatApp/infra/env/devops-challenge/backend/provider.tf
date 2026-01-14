@@ -6,7 +6,7 @@ terraform {
     }
   }
   backend "s3" {
-    bucket = "devops-challenge-terraform-backend"
+    bucket = "devops-challenge-terraform-backend-035238983996"
     key    = "dev/devops-challenge-terraform-backend/terraform.tfstate"
     region = "us-east-1"
     encrypt = true

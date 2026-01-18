@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 resource "aws_s3_bucket" "s3_bucket_challange_state_lock" {
-  bucket = "devops-challenge-terraform-backend-035238983996"
+  bucket = "devops-challenge-terraform-backend-996099991963"
   lifecycle {
     prevent_destroy = true
   }

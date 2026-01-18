@@ -27,3 +27,18 @@ variable "default_tags" {
   type = map(string)
   default = {}
 }
+
+variable "volume_size" {
+  type = number
+  default = 15
+}
+
+variable "ami_type" {
+  type = string
+  default = "ami-021a584b49225376d"
+}
+
+variable "instance_type" {
+  type = string
+  default = "t2.small"
+}

@@ -1,0 +1,45 @@
+#use this when load balancer not getting started
+#!/bin/bash
+
+# Variables
+CLUSTER_NAME="dev-eks-cluster"
+NAMESPACE="kube-system"
+SERVICEACCOUNT_NAME="aws-load-balancer-controller1"
+RELEASE_NAME="aws-load-balancer-controller"
+
+echo "Detecting VPC ID for cluster $CLUSTER_NAME..."
+VPC_ID=$(aws eks describe-cluster --name $CLUSTER_NAME --query "cluster.resourcesVpcConfig.vpcId" --output text)
+echo "VPC ID: $VPC_ID"
+
+echo "Detecting private subnets in VPC $VPC_ID..."
+PRIVATE_SUBNETS=$(aws ec2 describe-subnets \
+  --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query "Subnets[?MapPublicIpOnLaunch==\`false\`].SubnetId" \
+  --output text)
+echo "Private Subnets: $PRIVATE_SUBNETS"
+
+if [ -z "$PRIVATE_SUBNETS" ]; then
+  echo "Error: No private subnets found in VPC $VPC_ID"
+  exit 1
+fi
+
+# Generate alb-values.yaml
+cat <<EOF > alb-values.yaml
+clusterName: $CLUSTER_NAME
+serviceAccount:
+  create: false
+  name: $SERVICEACCOUNT_NAME
+vpcId: $VPC_ID
+subnets:
+$(for subnet in $PRIVATE_SUBNETS; do echo "  - $subnet"; done)
+EOF
+
+echo "Generated alb-values.yaml:"
+cat alb-values.yaml
+
+# Upgrade/install Helm release
+echo "Upgrading/installing AWS Load Balancer Controller Helm chart..."
+helm upgrade --install $RELEASE_NAME eks/aws-load-balancer-controller -n $NAMESPACE -f alb-values.yaml
+
+echo "Done! Check pods with:"
+echo "kubectl get pods -n $NAMESPACE -l app.kubernetes.io/name=aws-load-balancer-controller"

@@ -100,3 +100,77 @@ resource "aws_route_table_association" "private" {
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private.id
 }
+
+#Newly added for jenkins and docker server
+resource "aws_security_group" "CustomCG" {
+  name = "CustomCG"
+  description = "Allow all ports to make it genric"
+  vpc_id = aws_vpc.main.id
+  tags = {
+    Name = "CustomCG"
+    Description = "CustomCG"
+  }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "Allow_all_inbound" {
+  security_group_id = aws_security_group.CustomCG.id
+  cidr_ipv4 = "0.0.0.0/0"
+  ip_protocol = "-1"
+    tags = {
+    Name = "Allow_all_inbound"
+    description = "Allow all inbound traffic"
+  }
+}
+
+resource "aws_vpc_security_group_egress_rule" "Allow_All_Outbound" {
+  security_group_id = aws_security_group.CustomCG.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+  tags = {
+    Name        = "Allow_all_Outbound"
+    Description = "Allow all outbound traffic"
+  }
+}
+
+resource "aws_key_pair" "chat_app_key_1" {
+  key_name = "chat_app_key_1"
+  public_key = file("chat_app_key_1.pub")
+}
+
+resource "aws_instance" "Docker_Server" {
+  depends_on = [ aws_security_group.CustomCG ]
+  ami = var.ami_type
+  instance_type = var.instance_type
+  key_name = aws_key_pair.chat_app_key_1.key_name
+  subnet_id = aws_subnet.public.id
+  vpc_security_group_ids = [aws_security_group.CustomCG.id]
+  associate_public_ip_address = true
+
+  tags = {
+    Name = "Docker_Server"
+    Description = "Docker_Server"
+  }
+  root_block_device {
+    volume_size = var.volume_size
+    volume_type = "gp3"
+  }
+}
+
+resource "aws_instance" "Jenkins_Server" {
+    depends_on = [ aws_security_group.CustomCG ]
+  ami = var.ami_type
+  instance_type = vr.instance_type
+  key_name = aws_key_pair.chat_app_key_1.key_name
+  subnet_id = aws_subnet.public.id
+  vpc_security_group_ids = [aws_security_group.CustomCG.id]
+  associate_public_ip_address = true
+
+  tags = {
+    Name = "Jenkins_Server"
+    Description = "Jenkins_Server"
+  }
+  root_block_device {
+    volume_size = var.volume_size
+    volume_type = "gp3"
+  }
+}

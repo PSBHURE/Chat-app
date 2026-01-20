@@ -134,7 +134,8 @@ resource "aws_vpc_security_group_egress_rule" "Allow_All_Outbound" {
 
 resource "aws_key_pair" "chat_app_key_1" {
   key_name = "chat_app_key_1"
-  public_key = file("chat_app_key_1.pub")
+  #public_key = file("chat_app_key_1.pub")
+  public_key = file("${path.module}/chat_app_key_1.pub")
 }
 
 resource "aws_instance" "Docker_Server" {
@@ -142,7 +143,7 @@ resource "aws_instance" "Docker_Server" {
   ami = var.ami_type
   instance_type = var.instance_type
   key_name = aws_key_pair.chat_app_key_1.key_name
-  subnet_id = aws_subnet.public.id
+  subnet_id = aws_subnet.public[0].id
   vpc_security_group_ids = [aws_security_group.CustomCG.id]
   associate_public_ip_address = true
 
@@ -159,9 +160,9 @@ resource "aws_instance" "Docker_Server" {
 resource "aws_instance" "Jenkins_Server" {
     depends_on = [ aws_security_group.CustomCG ]
   ami = var.ami_type
-  instance_type = vr.instance_type
+  instance_type = var.instance_type
   key_name = aws_key_pair.chat_app_key_1.key_name
-  subnet_id = aws_subnet.public.id
+  subnet_id = aws_subnet.public[0].id
   vpc_security_group_ids = [aws_security_group.CustomCG.id]
   associate_public_ip_address = true
 

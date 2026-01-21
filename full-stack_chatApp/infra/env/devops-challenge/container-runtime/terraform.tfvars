@@ -8,11 +8,13 @@ ami_type        = "ami-0b6c6ebed2801a5cb"
 instance_type   = "t2.medium"
 
 public_subnet_cidrs = [
-  "10.0.1.0/24"
+  "10.0.1.0/24",
+  "10.0.2.0/24"
 ]
 
 private_subnet_cidrs = [
-  "10.0.3.0/24"
+  "10.0.3.0/24",
+  "10.0.4.0/24"
 ]
 
 node_groups = {

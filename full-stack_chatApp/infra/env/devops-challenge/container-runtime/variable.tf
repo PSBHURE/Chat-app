@@ -40,12 +40,12 @@ variable "volume_size" {
 
 variable "ami_type" {
   type = string
-  default = "ami-021a584b49225376d"
+  default = "ami-0b6c6ebed2801a5cb"
 }
 
 variable "instance_type" {
   type = string
-  default = "t2.small"
+  default = "t2.medium"
 }
 
 variable "node_groups" {

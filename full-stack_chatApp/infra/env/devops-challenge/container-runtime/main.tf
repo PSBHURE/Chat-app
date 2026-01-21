@@ -9,6 +9,9 @@ module "vpc" {
   public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
   azs                  = var.azs
+  ami_type             = var.ami_type
+  instance_type        = var.instance_type
+  volume_size          = var.volume_size
 }
 
 module "eks" {
@@ -20,3 +23,4 @@ module "eks" {
   node_groups = var.node_groups
 #   default_tags = var.default_tags
 }
+

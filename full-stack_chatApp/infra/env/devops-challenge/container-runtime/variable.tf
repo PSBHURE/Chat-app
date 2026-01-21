@@ -35,17 +35,14 @@ variable "cluster_version" {
 
 variable "volume_size" {
   type = number
-  default = 15
 }
 
 variable "ami_type" {
   type = string
-  default = "ami-0b6c6ebed2801a5cb"
 }
 
 variable "instance_type" {
   type = string
-  default = "t2.medium"
 }
 
 variable "node_groups" {

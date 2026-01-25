@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'Docker-Server' }
+    agent any
 
     environment {
         CHAT_APP_BACKEND_IMAGE_NAME = "chatapp-backend"

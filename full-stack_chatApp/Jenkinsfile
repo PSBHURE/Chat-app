@@ -1,37 +1,52 @@
 pipeline {
     agent any
 
+    options {
+        skipDefaultCheckout(true)
+        timestamps()
+    }
+
     environment {
-        CHAT_APP_BACKEND_IMAGE_NAME = "chatapp-backend"
+        APP_DIR = "full-stack_chatApp"
+
+        CHAT_APP_BACKEND_IMAGE_NAME  = "chatapp-backend"
         CHAT_APP_FRONTEND_IMAGE_NAME = "chatapp-frontend"
     }
 
     stages {
-        stage("Clone Repository") {
+
+        stage("Checkout Source Code") {
             steps {
-                echo "📥 Cloning the repository..."
+                echo "📥 Checking out source code..."
                 cleanWs()
-                git branch: 'main', url: 'https://github.com/PSBHURE/Chat-app.git'
+                git branch: 'main',
+                    url: 'https://github.com/PSBHURE/Chat-app.git',
+                    credentialsId: 'github-credentials'
             }
         }
 
         stage("Read & Increment Version") {
             steps {
+                dir("${APP_DIR}") {
                     script {
-                        def versionFile = 'version.txt'
+                        def versionFile = "version.txt"
+
+                        if (!fileExists(versionFile)) {
+                            echo "⚠️ version.txt not found. Creating default version 1.0.0"
+                            writeFile file: versionFile, text: "1.0.0"
+                        }
+
                         def version = readFile(versionFile).trim()
                         echo "🔢 Current Version: ${version}"
 
-                        // Increment patch version
                         def (major, minor, patch) = version.tokenize('.')
                         patch = patch.toInteger() + 1
                         env.NEW_VERSION = "${major}.${minor}.${patch}"
+
                         echo "📈 New Version: ${env.NEW_VERSION}"
 
-                        // Save new version to file
                         writeFile file: versionFile, text: env.NEW_VERSION
 
-                        // Commit and push version.txt using credentials
                         withCredentials([usernamePassword(
                             credentialsId: 'github-credentials',
                             usernameVariable: 'GIT_USERNAME',
@@ -47,54 +62,72 @@ pipeline {
                             """
                         }
                     }
-            }
-        }
-
-        stage("Build Docker Image") {
-            steps {
-                echo "🐳 Building Docker image..."
-                dir("chat-app-backend") {
-                    sh "docker build -t ${CHAT_APP_BACKEND_IMAGE_NAME}:${env.NEW_VERSION} -t ${CHAT_APP_BACKEND_IMAGE_NAME}:latest ."
-                }
-                dir("chat-app-frontend") {
-                    sh "docker build -t ${CHAT_APP_FRONTEND_IMAGE_NAME}:${env.NEW_VERSION} -t ${CHAT_APP_FRONTEND_IMAGE_NAME}:latest ."
                 }
             }
         }
 
-        stage("Push to DockerHub") {
+        stage("Build Docker Images") {
             steps {
-                echo "📦 Pushing image to DockerHub..."
-                script {
-                    withCredentials([usernamePassword(
-                        credentialsId: "DockerHubCred",
-                        usernameVariable: "DockerHubUser",
-                        passwordVariable: "DockerHubPass"
-                    )]) {
+                dir("${APP_DIR}") {
+                    echo "🐳 Building Docker images..."
+
+                    dir("backend") {
                         sh """
-                            docker login -u $DockerHubUser -p $DockerHubPass
+                            docker build \
+                            -t ${CHAT_APP_BACKEND_IMAGE_NAME}:${env.NEW_VERSION} \
+                            -t ${CHAT_APP_BACKEND_IMAGE_NAME}:latest .
+                        """
+                    }
 
-                            docker tag ${CHAT_APP_BACKEND_IMAGE_NAME}:${env.NEW_VERSION} $DockerHubUser/${CHAT_APP_BACKEND_IMAGE_NAME}:${env.NEW_VERSION}
-                            docker tag ${CHAT_APP_BACKEND_IMAGE_NAME}:latest $DockerHubUser/${CHAT_APP_BACKEND_IMAGE_NAME}:latest
-
-                            docker tag ${CHAT_APP_FRONTEND_IMAGE_NAME}:${env.NEW_VERSION} $DockerHubUser/${CHAT_APP_FRONTEND_IMAGE_NAME}:${env.NEW_VERSION}
-                            docker tag ${CHAT_APP_FRONTEND_IMAGE_NAME}:latest $DockerHubUser/${CHAT_APP_FRONTEND_IMAGE_NAME}:latest
-
-                            docker push $DockerHubUser/${CHAT_APP_BACKEND_IMAGE_NAME}:${env.NEW_VERSION}
-                            docker push $DockerHubUser/${CHAT_APP_BACKEND_IMAGE_NAME}:latest
-
-                            docker push $DockerHubUser/${CHAT_APP_FRONTEND_IMAGE_NAME}:${env.NEW_VERSION}
-                            docker push $DockerHubUser/${CHAT_APP_FRONTEND_IMAGE_NAME}:latest
+                    dir("frontend") {
+                        sh """
+                            docker build \
+                            -t ${CHAT_APP_FRONTEND_IMAGE_NAME}:${env.NEW_VERSION} \
+                            -t ${CHAT_APP_FRONTEND_IMAGE_NAME}:latest .
                         """
                     }
                 }
             }
         }
 
-        stage("Success Feedback") {
+        stage("Push Images to DockerHub") {
             steps {
-                echo "✅ Jenkins pipeline completed successfully! Version: ${env.NEW_VERSION}"
+                echo "📦 Pushing Docker images to DockerHub..."
+                withCredentials([usernamePassword(
+                    credentialsId: "DockerHubCred",
+                    usernameVariable: "DOCKER_USER",
+                    passwordVariable: "DOCKER_PASS"
+                )]) {
+                    sh """
+                        docker login -u $DOCKER_USER -p $DOCKER_PASS
+
+                        docker tag ${CHAT_APP_BACKEND_IMAGE_NAME}:${env.NEW_VERSION} $DOCKER_USER/${CHAT_APP_BACKEND_IMAGE_NAME}:${env.NEW_VERSION}
+                        docker tag ${CHAT_APP_BACKEND_IMAGE_NAME}:latest $DOCKER_USER/${CHAT_APP_BACKEND_IMAGE_NAME}:latest
+
+                        docker tag ${CHAT_APP_FRONTEND_IMAGE_NAME}:${env.NEW_VERSION} $DOCKER_USER/${CHAT_APP_FRONTEND_IMAGE_NAME}:${env.NEW_VERSION}
+                        docker tag ${CHAT_APP_FRONTEND_IMAGE_NAME}:latest $DOCKER_USER/${CHAT_APP_FRONTEND_IMAGE_NAME}:latest
+
+                        docker push $DOCKER_USER/${CHAT_APP_BACKEND_IMAGE_NAME}:${env.NEW_VERSION}
+                        docker push $DOCKER_USER/${CHAT_APP_BACKEND_IMAGE_NAME}:latest
+
+                        docker push $DOCKER_USER/${CHAT_APP_FRONTEND_IMAGE_NAME}:${env.NEW_VERSION}
+                        docker push $DOCKER_USER/${CHAT_APP_FRONTEND_IMAGE_NAME}:latest
+                    """
+                }
             }
+        }
+
+        stage("Success") {
+            steps {
+                echo "✅ CI/CD Pipeline completed successfully!"
+                echo "🚀 Released Version: ${env.NEW_VERSION}"
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo "❌ Pipeline failed. Please check logs above."
         }
     }
 }
